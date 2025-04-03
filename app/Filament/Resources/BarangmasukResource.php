@@ -30,6 +30,16 @@ class BarangmasukResource extends Resource
 
     protected static ?string $slug = 'barang-masuk';
 
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'success';
+    }
+
     protected function beforeCreate(array $data): array
     {
         // Cek jika tipe transaksi adalah barang baru

@@ -606,7 +606,7 @@ class TransaksiResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\FaktursRelationManager::class,
         ];
     }
 

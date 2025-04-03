@@ -41,19 +41,19 @@ class Transaksi extends Model
     {
         return $this->belongsTo(User::class);
     }
-
+    
     public function member()
     {
         return $this->belongsTo(Member::class);
     }
-
+    
+    public function fakturs()
+    {
+        return $this->hasMany(Faktur::class);
+    }
+    
     public function barangKeluars()
     {
         return $this->hasMany(BarangKeluar::class);
-    }
-
-    public function fakturs()
-    {
-        return $this->hasOne(Faktur::class);
     }
 }
