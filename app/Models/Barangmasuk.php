@@ -35,21 +35,9 @@ class Barangmasuk extends Model
         'total_harga' => 'integer',
     ];
 
-    public function filterDataToSave(array $data)
-    {
-        return [
-            'no_referensi' => $data['no_referensi'],
-            'barang_id' => $data['barang_id'],
-            'jumlah_barang_masuk' => $data['jumlah_barang_masuk'],
-            'harga_beli' => $data['harga_beli'],
-            'total_harga' => $data['total_harga'],
-            'tanggal_masuk_barang' => $data['tanggal_masuk_barang'],
-            'user_id' => $data['user_id'],
-        ];
-    }
 
     public function barang()
-    {
+    { 
         return $this->belongsTo(Barang::class);
     }
 

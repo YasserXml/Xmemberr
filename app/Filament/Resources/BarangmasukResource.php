@@ -40,37 +40,6 @@ class BarangmasukResource extends Resource
         return 'success';
     }
 
-    protected function beforeCreate(array $data): array
-    {
-        // Cek jika tipe transaksi adalah barang baru
-        if ($data['tipe_transaksi'] === 'barang_baru') {
-            DB::beginTransaction();
-            try {
-                // Buat barang baru
-                $barang = Barang::create([
-                    'kode_barang' => $data['kode_barang'],
-                    'nama_barang' => $data['nama_barang'],
-                    'harga_beli' => $data['harga_beli'],
-                    'harga_jual' => $data['harga_jual'] ?? ($data['harga_beli'] * 1.2),
-                    'stok' => $data['jumlah_barang_masuk'],
-                    'stok_minimum' => $data['stok_minimum'] ?? 5,
-                    'satuan' => $data['satuan'] ?? 'pcs',
-                    'kategori_id' => $data['kategori_id'],
-                ]);
-
-                // Set barang_id untuk disimpan
-                $data['barang_id'] = $barang->id;
-
-                DB::commit();
-            } catch (\Exception $e) {
-                DB::rollBack();
-                throw $e;
-            }
-        }
-
-        return $data;
-    }
-
     public static function form(Form $form): Form
     {
         return $form

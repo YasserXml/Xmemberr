@@ -19,8 +19,6 @@ return new class extends Migration
             $table->date('tanggal_transaksi');
             $table->json('items');
             $table->integer('total_harga');
-            $table->integer('diskon');
-            $table->integer('grand_total');
             $table->integer('total_bayar');
             $table->integer('kembalian');
             $table->enum('status_pembayaran', ['belum_bayar', 'sebagian', 'lunas'])->default('belum_bayar');

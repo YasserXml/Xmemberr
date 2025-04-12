@@ -176,7 +176,7 @@ class FakturResource extends Resource
                     ->url(fn ($record) => $record->transaksi_id ? 
                         '/admin/transaksis/' . $record->transaksi_id : null),
                 
-                TextColumn::make('transaksi.grand_total')
+                TextColumn::make('transaksi.total_harga')
                     ->label('Nilai Transaksi')
                     ->money('IDR')
                     ->sortable(),
@@ -258,12 +258,7 @@ class FakturResource extends Resource
                         ->label('Edit')
                         ->icon('heroicon-o-pencil'),
                     
-                    Tables\Actions\Action::make('printFaktur')
-                        ->label('Cetak Faktur')
-                        ->icon('heroicon-o-printer')
-                        ->color('success')
-                        ->url(fn (Faktur $record): string => route('faktur.print', $record))
-                        ->openUrlInNewTab(),
+                    
                     
                     Tables\Actions\DeleteAction::make()
                         ->label('Hapus')

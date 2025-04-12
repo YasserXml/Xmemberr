@@ -33,6 +33,7 @@ class FaktursRelationManager extends RelationManager
                     ->default(fn () => 'INV-' . strtoupper(Str::random(8)))
                     ->disabled()
                     ->required()
+                    ->dehydrated()
                     ->unique('fakturs', 'no_faktur', ignoreRecord: true),
 
                 Forms\Components\DatePicker::make('tanggal_faktur')
@@ -75,16 +76,20 @@ class FaktursRelationManager extends RelationManager
                     ->sortable()
                     ->icon('heroicon-o-calendar'),
 
-                Tables\Columns\BadgeColumn::make('status')
+                    Tables\Columns\TextColumn::make('status')
                     ->label('Status')
-                    ->enum([
-                        'lunas' => 'Lunas',
-                        'belum_lunas' => 'Belum Lunas',
-                    ])
+                    ->state(function ($record) {
+                        return $record->status;
+                    })
                     ->colors([
                         'success' => 'lunas',
                         'danger' => 'belum_lunas',
-                    ]),
+                    ])
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'lunas' => 'Lunas',
+                        'belum_lunas' => 'Belum Lunas',
+                        default => $state,
+                    }),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Dibuat Pada')

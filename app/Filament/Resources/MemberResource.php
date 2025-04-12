@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
@@ -55,6 +56,7 @@ class MemberResource extends Resource
                             ->required()
                             ->unique(ignoreRecord: true)
                             ->placeholder('Masukkan kode member')
+                            ->default(fn() => 'M-' . strtoupper(Str::random(6)))
                             ->autocapitalize('characters')
                             ->prefixIcon('heroicon-o-identification'),
                             
@@ -76,11 +78,22 @@ class MemberResource extends Resource
                             ->placeholder('email@example.com')
                             ->prefixIcon('heroicon-o-envelope'),
                         
-                        TextInput::make('telepon')
+                            TextInput::make('telepon')
                             ->label('Nomor Telepon')
-                            ->tel()
                             ->placeholder('08xxxxxxxxxx')
-                            ->prefixIcon('heroicon-o-device-phone-mobile'),
+                            ->prefixIcon('heroicon-o-device-phone-mobile')
+                            ->tel()
+                            ->numeric()
+                            ->extraInputAttributes([
+                                'maxlength' => 11,
+                                'oninput' => 'javascript: if(this.value.length > 11) this.value = this.value.slice(0, 11); this.value = this.value.replace(/[^0-9]/g, "")'
+                            ])
+                            ->rules([
+                                'required',
+                                'numeric',
+                                'digits_between:8,11'
+                            ])
+                            ->validationAttribute('Nomor Telepon')
                     ])->columns(2),
                     
                 Forms\Components\Section::make('Alamat')
@@ -138,7 +151,8 @@ class MemberResource extends Resource
             ->actions([
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\ViewAction::make(),
-                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\EditAction::make()
+                    ->color('info'),
                     Tables\Actions\DeleteAction::make(),
                     Tables\Actions\RestoreAction::make(),
                 ])
