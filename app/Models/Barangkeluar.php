@@ -13,19 +13,17 @@ class Barangkeluar extends Model
 
     protected $fillable = [
         'no_referensi',
-        'barang_id',
         'jumlah_barang_keluar',
         'harga_jual',
         'total_harga',
         'tanggal_keluar',
+        'barang_id',
         'transaksi_id',
         'user_id',
     ];
-
+    
     protected $casts = [
         'tanggal_keluar' => 'date',
-        'harga_jual' => 'decimal:2',
-        'total_harga' => 'decimal:2',
     ];
 
     public function barang()

@@ -99,7 +99,7 @@ class TransaksiResource extends Resource
             $set('../../faktur.status', $fakturStatus);
         }
     }
-
+    
     public static function form(Form $form): Form
     {
         return $form

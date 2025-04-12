@@ -11,6 +11,7 @@ use Filament\Actions\ForceDeleteAction;
 use Filament\Actions\RestoreAction;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Support\RawJs;
 use Filament\Tables;
@@ -134,150 +135,294 @@ class BarangResource extends Resource
     }
 
     public static function table(Table $table): Table
-    {
-        return $table
-            ->columns([
-                Tables\Columns\TextColumn::make('kode_barang')
-                    ->label('Kode Barang')
-                    ->searchable()
-                    ->sortable()
-                    ->copyable()
-                    ->tooltip('Kode unik untuk barang'),
+{
+    return $table
+        ->columns([
+            Tables\Columns\TextColumn::make('kode_barang')
+                ->label('Kode Barang')
+                ->searchable()
+                ->sortable()
+                ->copyable()
+                ->copyMessage('Kode barang disalin!')
+                ->tooltip('Kode unik untuk identifikasi barang')
+                ->icon('heroicon-o-tag')
+                ->weight('bold'),
 
-                Tables\Columns\TextColumn::make('nama_barang')
-                    ->label('Nama Barang')
-                    ->searchable()
-                    ->sortable()
-                    ->limit(30)
-                    ->tooltip(fn($record) => $record->nama_barang),
+            Tables\Columns\TextColumn::make('nama_barang')
+                ->label('Nama Barang')
+                ->searchable()
+                ->sortable()
+                ->limit(30)
+                ->tooltip(fn($record) => $record->nama_barang)
+                ->wrap(),
 
-                Tables\Columns\TextColumn::make('kategori.nama_kategori')
-                    ->label('Kategori')
-                    ->searchable()
-                    ->sortable()
-                    ->badge()
-                    ->color('secondary'),
+            Tables\Columns\TextColumn::make('kategori.nama_kategori')
+                ->label('Kategori')
+                ->searchable()
+                ->sortable()
+                ->badge()
+                ->color('secondary')
+                ->icon('heroicon-o-rectangle-stack')
+                ->extraCellAttributes(['class' => 'font-medium']),
 
-                Tables\Columns\TextColumn::make('harga_beli')
-                    ->label('Harga Beli')
-                    ->money('IDR')
-                    ->formatStateUsing(fn($state) => 'Rp ' . number_format($state, 0, ',', '.'))
-                    ->alignEnd()
-                    ->sortable(),
-
-                Tables\Columns\TextColumn::make('harga_jual')
-                    ->label('Harga Jual')
-                    ->money('IDR')
-                    ->formatStateUsing(fn($state) => 'Rp ' . number_format($state, 0, ',', '.'))
-                    ->alignEnd()
-                    ->sortable()
-                    ->color(fn($record) => $record->harga_jual > 1.5 * $record->harga_beli ? 'success' : 'primary'),
-
-                Tables\Columns\TextColumn::make('stok')
-                    ->label('Stok')
-                    ->badge()
-                    ->alignCenter()
-                    ->sortable()
-                    ->color(
-                        fn($state) =>
-                        $state <= 0 ? 'danger' : ($state <= 5 ? 'warning' : 'success')
-                    )
-                    ->description(fn($record) => $record->stok <= 5 ? 'Stok Rendah' : null),
-
-                Tables\Columns\TextColumn::make('satuan')
-                    ->label('Satuan')
-                    ->badge()
-                    ->alignCenter(),
-
-                Tables\Columns\TextColumn::make('created_at')
-                    ->label('Dibuat')
-                    ->dateTime('d/m/Y H:i')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Diperbarui')
-                    ->dateTime('d/m/Y H:i')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                TrashedFilter::make(),
-                Tables\Filters\SelectFilter::make('kategori_id')
-                    ->label('Kategori')
-                    ->relationship('kategori', 'nama_kategori')
-                    ->searchable()
-                    ->preload(),
-
-                Tables\Filters\Filter::make('stok_rendah')
-                    ->label('Stok Rendah')
-                    ->query(fn(Builder $query): Builder => $query->where('stok', '<=', 5))
-                    ->indicator('Stok Rendah'),
-
-                Tables\Filters\Filter::make('stok_kosong')
-                    ->label('Stok Kosong')
-                    ->query(fn(Builder $query): Builder => $query->where('stok', '<=', 0))
-                    ->indicator('Stok Kosong'),
-
-                Tables\Filters\SelectFilter::make('satuan')
-                    ->label('Satuan')
-                    ->options(fn() => \App\Models\Barang::distinct()->pluck('satuan', 'satuan')->toArray()),
-            ])
-            ->actions([
-                Tables\Actions\ActionGroup::make([
-                    Tables\Actions\ViewAction::make()
-                        ->color('success')
-                        ->icon('heroicon-o-eye'),
-                    Tables\Actions\EditAction::make()
-                        ->color('info')
-                        ->icon('heroicon-o-pencil'),
-                    Tables\Actions\DeleteAction::make()
-                        ->color('danger')
-                        ->icon('heroicon-o-trash'),
-                    Tables\Actions\RestoreAction::make()
-                        ->icon('heroicon-o-arrow-path'),
-                ])
-                    ->icon('heroicon-m-ellipsis-vertical')
-                    ->tooltip('Aksi'),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make()
-                        ->icon('heroicon-o-trash'),
-                    Tables\Actions\RestoreBulkAction::make()
-                        ->icon('heroicon-o-arrow-path'),
-                    Tables\Actions\BulkAction::make('updateStok')
-                        ->label('Update Stok')
-                        ->icon('heroicon-o-plus-circle')
-                        ->action(function (Collection $records, array $data): void {
-                            foreach ($records as $record) {
-                                $record->stok = $record->stok + $data['jumlah'];
-                                $record->save();
-                            }
-                        })
-                        ->form([
-                            Forms\Components\TextInput::make('jumlah')
-                                ->label('Jumlah')
-                                ->numeric()
-                                ->required(),
-                        ]),
+            Tables\Columns\TextColumn::make('harga_beli')
+                ->label('Harga Beli')
+                ->money('IDR')
+                ->formatStateUsing(fn($state) => 'Rp ' . number_format($state, 0, ',', '.'))
+                ->alignEnd()
+                ->sortable()
+                ->summarize([
+                    Tables\Columns\Summarizers\Average::make()
+                        ->money('IDR')
+                        ->formatStateUsing(fn($state) => 'Rata-rata: Rp ' . number_format($state, 0, ',', '.')),
                 ]),
+
+            Tables\Columns\TextColumn::make('harga_jual')
+                ->label('Harga Jual')
+                ->money('IDR')
+                ->formatStateUsing(fn($state) => 'Rp ' . number_format($state, 0, ',', '.'))
+                ->alignEnd()
+                ->sortable()
+                ->color(fn($record) => $record->harga_jual > 1.5 * $record->harga_beli ? 'success' : 'primary')
+                ->tooltip(fn($record) => 'Profit: Rp ' . number_format($record->harga_jual - $record->harga_beli, 0, ',', '.'))
+                ->summarize([
+                    Tables\Columns\Summarizers\Average::make()
+                        ->money('IDR')
+                        ->formatStateUsing(fn($state) => 'Rata-rata: Rp ' . number_format($state, 0, ',', '.')),
+                ]),
+
+            Tables\Columns\TextColumn::make('stok')
+                ->label('Stok')
+                ->badge()
+                ->alignCenter()
+                ->sortable()
+                ->color(
+                    fn($state) =>
+                    $state <= 0 ? 'danger' : ($state <= 5 ? 'warning' : 'success')
+                )
+                ->icon(fn($state) => 
+                    $state <= 0 ? 'heroicon-o-x-circle' : 
+                    ($state <= 5 ? 'heroicon-o-exclamation-triangle' : 'heroicon-o-check-circle')
+                )
+                ->description(fn($record) => $record->stok <= 5 ? 'Stok Rendah' : null)
+                ->searchable()
+                ->summarize([
+                    Tables\Columns\Summarizers\Sum::make()->label('Total Stok'),
+                ]),
+
+            Tables\Columns\TextColumn::make('satuan')
+                ->label('Satuan')
+                ->badge()
+                ->alignCenter()
+                ->searchable(),
+
+            Tables\Columns\TextColumn::make('created_at')
+                ->label('Dibuat')
+                ->dateTime('d/m/Y H:i')
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true)
+                ->tooltip(fn($record) => 'Dibuat: ' . $record->created_at->diffForHumans()),
+
+            Tables\Columns\TextColumn::make('updated_at')
+                ->label('Diperbarui')
+                ->dateTime('d/m/Y H:i')
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true)
+                ->tooltip(fn($record) => 'Diperbarui: ' . $record->updated_at->diffForHumans())
+                ->since(),
+        ])
+        ->filters([
+            TrashedFilter::make(),
+            Tables\Filters\SelectFilter::make('kategori_id')
+                ->label('Kategori')
+                ->relationship('kategori', 'nama_kategori')
+                ->searchable()
+                ->preload()
+                ->multiple()
+                ->indicator('Kategori'),
+
+            Tables\Filters\Filter::make('stok_rendah')
+                ->label('Stok Rendah')
+                ->query(fn(Builder $query): Builder => $query->where('stok', '<=', 5))
+                ->indicator('Stok Rendah')
+                ,
+
+            Tables\Filters\Filter::make('stok_kosong')
+                ->label('Stok Kosong')
+                ->query(fn(Builder $query): Builder => $query->where('stok', '<=', 0))
+                ->indicator('Stok Kosong')
+                ,
+
+            Tables\Filters\SelectFilter::make('satuan')
+                ->label('Satuan')
+                ->options(fn() => \App\Models\Barang::distinct()->pluck('satuan', 'satuan')->toArray())
+                ->multiple()
+                ->indicator('Satuan'),
+                
+            Tables\Filters\Filter::make('harga_range')
+                ->form([
+                    Forms\Components\Grid::make(2)
+                        ->schema([
+                            Forms\Components\TextInput::make('harga_dari')
+                                ->label('Harga dari')
+                                ->numeric()
+                                ->placeholder('Min')
+                                ,
+                            Forms\Components\TextInput::make('harga_sampai')
+                                ->label('Harga sampai')
+                                ->numeric()
+                                ->placeholder('Max')
+                                ,
+                        ]),
+                ])
+                ->query(function (Builder $query, array $data): Builder {
+                    return $query
+                        ->when(
+                            $data['harga_dari'],
+                            fn(Builder $query, $amount): Builder => $query->where('harga_jual', '>=', $amount),
+                        )
+                        ->when(
+                            $data['harga_sampai'],
+                            fn(Builder $query, $amount): Builder => $query->where('harga_jual', '<=', $amount),
+                        );
+                })
+                ->indicateUsing(function (array $data): array {
+                    $indicators = [];
+                    
+                    if ($data['harga_dari'] ?? null) {
+                        $indicators['harga_dari'] = 'Harga dari: Rp ' . number_format($data['harga_dari'], 0, ',', '.');
+                    }
+                    
+                    if ($data['harga_sampai'] ?? null) {
+                        $indicators['harga_sampai'] = 'Harga sampai: Rp ' . number_format($data['harga_sampai'], 0, ',', '.');
+                    }
+                    
+                    return $indicators;
+                }),
+        ]) 
+        ->actions([
+            Tables\Actions\ActionGroup::make([
+                Tables\Actions\ViewAction::make()
+                    ->color('success')
+                    ->icon('heroicon-o-eye')
+                    ->modalHeading(fn($record) => "Detail Barang: {$record->nama_barang}")
+                    ->slideOver(),
+                    
+                Tables\Actions\EditAction::make()
+                    ->color('info')
+                    ->icon('heroicon-o-pencil')
+                    ->modalHeading(fn($record) => "Edit Barang: {$record->nama_barang}")
+                    ->slideOver(),
+                    
+                Tables\Actions\Action::make('updateStok')
+                    ->label('Update Stok')
+                    ->color('warning')
+                    ->icon('heroicon-o-plus-circle')
+                    ->action(function ($record, array $data): void {
+                        $record->stok = $record->stok + $data['jumlah'];
+                        $record->save();
+                        
+                        // Gunakan facade Notification yang benar untuk Filament 3.3
+                        \Filament\Notifications\Notification::make()
+                            ->title('Stok berhasil diperbarui')
+                            ->success()
+                            ->send();
+                    })
+                    ->form([
+                        Forms\Components\TextInput::make('jumlah')
+                            ->label('Jumlah')
+                            ->numeric()
+                            ->required()
+                            ->minValue(-100)
+                            ->maxValue(1000)
+                            ->placeholder('Masukkan jumlah stok')
+                            ->suffix('unit')
+                            ->helperText('Masukkan angka negatif untuk mengurangi stok'),
+                    ])
+                    ->modalHeading(fn($record) => "Update Stok: {$record->nama_barang}")
+                    ->modalWidth('md'),
+                    
+                Tables\Actions\DeleteAction::make()
+                    ->color('danger')
+                    ->icon('heroicon-o-trash')
+                    ->modalHeading('Hapus Barang')
+                    ->modalDescription('Apakah Anda yakin ingin menghapus barang ini? Tindakan ini dapat dibatalkan nanti.')
+                    ->requiresConfirmation(),
+                    
+                Tables\Actions\RestoreAction::make()
+                    ->icon('heroicon-o-arrow-path')
+                    ->color('success')
+                    ->modalHeading('Pulihkan Barang')
+                    ->modalDescription('Apakah Anda yakin ingin memulihkan barang ini?')
+                    ->requiresConfirmation(),
             ])
-            ->emptyStateHeading('Belum ada data barang')
-            ->emptyStateDescription('Silakan tambahkan data barang baru')
-            ->emptyStateIcon('heroicon-o-shopping-bag')
-            ->emptyStateActions([
-                Tables\Actions\Action::make('create')
-                    ->label('Tambah Barang')
-                    ->url(route('filament.admin.resources.barang.create'))
-                    ->icon('heroicon-o-plus')
-                    ->button(),
-            ])
-            ->striped()
-            ->defaultSort('created_at', 'desc')
-            ->paginated([10, 25, 50, 100])
-            ->poll('60s'); // Refresh data setiap 60 detik
-    }
+                ->icon('heroicon-m-ellipsis-vertical')
+                ->tooltip('Aksi')
+                ->size('sm'),
+        ])
+        
+        ->bulkActions([
+            Tables\Actions\BulkActionGroup::make([
+                Tables\Actions\DeleteBulkAction::make()
+                    ->icon('heroicon-o-trash')
+                    ->modalHeading('Hapus Barang Terpilih')
+                    ->modalDescription('Apakah Anda yakin ingin menghapus semua barang yang dipilih? Tindakan ini dapat dibatalkan nanti.')
+                    ->deselectRecordsAfterCompletion(),
+                    
+                Tables\Actions\RestoreBulkAction::make()
+                    ->icon('heroicon-o-arrow-path')
+                    ->modalHeading('Pulihkan Barang Terpilih')
+                    ->modalDescription('Apakah Anda yakin ingin memulihkan semua barang yang dipilih?')
+                    ->deselectRecordsAfterCompletion(),
+                    
+                Tables\Actions\BulkAction::make('updateStok')
+                    ->label('Update Stok')
+                    ->icon('heroicon-o-plus-circle')
+                    ->color('warning')
+                    ->action(function (Collection $records, array $data): void {
+                        foreach ($records as $record) {
+                            $record->stok = $record->stok + $data['jumlah'];
+                            $record->save();
+                        }
+                        
+                        // Gunakan facade Notification yang benar untuk Filament 3.3
+                        \Filament\Notifications\Notification::make()
+                            ->title('Stok ' . $records->count() . ' barang berhasil diperbarui')
+                            ->success()
+                            ->send();
+                    })
+                    ->form([
+                        Forms\Components\TextInput::make('jumlah')
+                            ->label('Jumlah')
+                            ->numeric()
+                            ->required()
+                            ->minValue(-100)
+                            ->maxValue(1000)
+                            ->placeholder('Masukkan jumlah stok')
+                            ->suffix('unit')
+                            ->helperText('Masukkan angka negatif untuk mengurangi stok'),
+                    ])
+                    ->deselectRecordsAfterCompletion()
+                    ->modalHeading('Update Stok Barang Terpilih')
+                    ->modalWidth('md'),
+                ])
+        ])
+        ->emptyStateHeading('Belum ada data barang')
+        ->emptyStateDescription('Silakan tambahkan data barang baru untuk mengelola inventaris Anda')
+        ->emptyStateIcon('heroicon-o-shopping-bag')
+        ->emptyStateActions([
+            Tables\Actions\Action::make('create')
+                ->label('Tambah Barang')
+                ->url(route('filament.admin.resources.barang.create'))
+                ->icon('heroicon-o-plus')
+                ->button(),
+        ])
+        ->striped()
+        ->defaultSort('created_at', 'desc')
+        ->paginated([10, 25, 50, 100])
+        ->poll('60s')
+        ->deferLoading();
+}
 
     public static function getRelations(): array
     {

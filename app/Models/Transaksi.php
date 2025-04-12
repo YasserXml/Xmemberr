@@ -14,27 +14,21 @@ class Transaksi extends Model
 
     protected $fillable = [
         'no_transaksi',
+        'tanggal_transaksi',
         'member_id',
         'user_id',
-        'tanggal_transaksi',
         'items',
         'total_harga',
-        'diskon',
-        'grand_total',
         'total_bayar',
         'kembalian',
-        'status_pembayaran',
         'metode_pembayaran',
+        'status_pembayaran',
     ];
-
+    
+    // Pastikan items disimpan sebagai JSON
     protected $casts = [
-        'tanggal_transaksi' => 'date',
         'items' => 'array',
-        'total_harga' => 'integer',
-        'diskon' => 'integer',
-        'grand_total' => 'integer',
-        'total_bayar' => 'integer',
-        'kembalian' => 'integer',
+        'tanggal_transaksi' => 'date',
     ];
 
     public function user()
