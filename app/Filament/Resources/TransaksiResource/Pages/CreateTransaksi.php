@@ -10,11 +10,19 @@ use Illuminate\Support\Str;
 class CreateTransaksi extends CreateRecord
 {
     protected static string $resource = TransaksiResource::class;
-    
+
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        // Normalisasi total bayar dan total harga
+        // Hapus member_id jika tipe pelanggan adalah non_member
+        if (isset($data['tipe_pelanggan']) && $data['tipe_pelanggan'] === 'non_member') {
+            $data['member_id'] = null;
+        }
+
+        // Hapus field tipe_pelanggan karena tidak perlu disimpan ke database
+        unset($data['tipe_pelanggan']);
+
+        // Kode normalisasi yang sudah ada
         $totalBayar = is_string($data['total_bayar'] ?? 0) ? (int)preg_replace('/[^0-9]/', '', $data['total_bayar']) : (int)($data['total_bayar'] ?? 0);
         $totalHarga = is_string($data['total_harga'] ?? 0) ? (int)preg_replace('/[^0-9]/', '', $data['total_harga']) : (int)($data['total_harga'] ?? 0);
 
@@ -40,7 +48,7 @@ class CreateTransaksi extends CreateRecord
 
     protected function mutateFormDataBeforeUpdate(array $data): array
     {
-        // Gunakan kode yang sama dengan beforeCreate
+        // Logika yang sama dengan beforeCreate
         return $this->mutateFormDataBeforeCreate($data);
     }
 }

@@ -19,6 +19,7 @@ use Filament\Tables\Actions\ForceDeleteBulkAction;
 use Filament\Tables\Actions\RestoreBulkAction;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -49,90 +50,164 @@ class BarangResource extends Resource
 
 
     public static function form(Form $form): Form
-    {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Informasi Barang')
-                    ->schema([
-                        Forms\Components\TextInput::make('kode_barang')
-                            ->label('Kode Barang')
-                            ->required()
-                            ->unique(ignoreRecord: true)
-                            ->maxLength(255),
+{
+    return $form
+        ->schema([
+            Forms\Components\Tabs::make('Manajemen Barang')
+                ->tabs([
+                    Forms\Components\Tabs\Tab::make('Informasi Dasar')
+                        ->icon('heroicon-o-information-circle')
+                        ->schema([
+                            Forms\Components\Section::make()
+                                ->schema([
+                                    Forms\Components\Grid::make()
+                                        ->schema([
+                                            Forms\Components\TextInput::make('kode_barang')
+                                                ->label('Kode Barang')
+                                                ->required()
+                                                ->default(fn() => 'BR-' . strtoupper(Str::random(8)))
+                                                ->unique(ignoreRecord: true)
+                                                ->maxLength(255)
+                                                ->disabled()
+                                                ->dehydrated()
+                                                ->helperText('Kode barang digenerate otomatis')
+                                                ->prefixIcon('heroicon-m-document-text'),
 
-                        Forms\Components\TextInput::make('nama_barang')
-                            ->label('Nama Barang')
-                            ->required()
-                            ->maxLength(255),
+                                            Forms\Components\TextInput::make('nama_barang')
+                                                ->label('Nama Barang')
+                                                ->required()
+                                                ->maxLength(255)
+                                                ->autofocus()
+                                                ->placeholder('Masukkan nama barang')
+                                                ->prefixIcon('heroicon-m-tag'),
+                                        ]),
 
-                        Forms\Components\Select::make('kategori_id')
-                            ->label('Kategori Barang')
-                            ->relationship('kategori', 'nama_kategori')
-                            ->searchable()
-                            ->preload()
-                            ->nullable(),
-                    ])->columns(3),
+                                    Forms\Components\Select::make('kategori_id')
+                                        ->label('Kategori Barang')
+                                        ->relationship('kategori', 'nama_kategori')
+                                        ->createOptionForm([
+                                            Forms\Components\TextInput::make('nama_kategori')
+                                                ->required()
+                                                ->maxLength(255),
+                                            Forms\Components\Textarea::make('deskripsi')
+                                                ->maxLength(65535)
+                                                ->columnSpanFull(),
+                                        ])
+                                        ->searchable()
+                                        ->preload()
+                                        ->editOptionForm([
+                                            Forms\Components\TextInput::make('nama_kategori')
+                                                ->required()
+                                                ->maxLength(255),
+                                            Forms\Components\Textarea::make('deskripsi')
+                                                ->maxLength(65535)
+                                                ->columnSpanFull(),
+                                        ])
+                                        ->native(false)
+                                        ->prefixIcon('heroicon-m-squares-2x2'),
+                                ]),
+                        ]),
 
-                Forms\Components\Section::make('Harga dan Stok')
-                    ->schema([
-                        Forms\Components\TextInput::make('harga_beli')
-                            ->label('Harga Beli')
-                            ->numeric()
-                            ->mask(RawJs::make('$money($input)'))
-                            ->prefix('Rp.')
-                            ->inputMode('numeric')
-                            ->live()
-                            ->afterStateUpdated(function ($state, callable $set) {
-                                $numericValue = preg_replace('/[^0-9]/', '', $state);
-                                $set('harga_beli', $numericValue);
-                            })
-                            ->minValue(0)
-                            ->required(),
+                    Forms\Components\Tabs\Tab::make('Harga & Stok')
+                        ->icon('heroicon-m-currency-dollar')
+                        ->schema([
+                            Forms\Components\Section::make('Informasi Harga')
+                                ->description('Atur harga beli dan jual barang')
+                                ->schema([
+                                    Forms\Components\Grid::make(2)
+                                        ->schema([
+                                            Forms\Components\TextInput::make('harga_beli')
+                                                ->label('Harga Beli')
+                                                ->numeric()
+                                                ->mask(RawJs::make('$money($input)'))
+                                                ->prefix('Rp')
+                                                ->inputMode('numeric')
+                                                ->live()
+                                                ->afterStateUpdated(function ($state, callable $set) {
+                                                    $numericValue = preg_replace('/[^0-9]/', '', $state);
+                                                    $set('harga_beli', $numericValue);
+                                                })
+                                                ->minValue(0)
+                                                ->required()
+                                                ->suffixIcon('heroicon-m-banknotes'),
 
-                        Forms\Components\TextInput::make('harga_jual')
-                            ->label('Harga Jual')
-                            ->numeric()
-                            ->mask(RawJs::make('$money($input)'))
-                            ->prefix('Rp.')
-                            ->inputMode('numeric')
-                            ->live()
-                            ->afterStateUpdated(function ($state, callable $set) {
-                                $numericValue = preg_replace('/[^0-9]/', '', $state);
-                                $set('harga_jual', $numericValue);
-                            })
-                            ->minValue(0)
-                            ->required(),
+                                            Forms\Components\TextInput::make('harga_jual')
+                                                ->label('Harga Jual')
+                                                ->numeric()
+                                                ->mask(RawJs::make('$money($input)'))
+                                                ->prefix('Rp')
+                                                ->inputMode('numeric')
+                                                ->live()
+                                                ->afterStateUpdated(function ($state, callable $set, $get) {
+                                                    $numericValue = preg_replace('/[^0-9]/', '', $state);
+                                                    $set('harga_jual', $numericValue);
+                                                    
+                                                    // Calculate margin
+                                                    $hargaBeli = (int)$get('harga_beli');
+                                                    if ($hargaBeli > 0 && $numericValue > 0) {
+                                                        $marginPercentage = (($numericValue - $hargaBeli) / $hargaBeli) * 100;
+                                                        $set('margin', round($marginPercentage, 2));
+                                                    }
+                                                })
+                                                ->minValue(0)
+                                                ->required()
+                                                ->suffixIcon('heroicon-m-receipt-percent'),
+                                        ]),
+                                    
+                                    Forms\Components\TextInput::make('margin')
+                                        ->label('Margin (%)')
+                                        ->disabled()
+                                        ->suffix('%')
+                                        ->dehydrated(false),
+                                ]),
 
-                        Forms\Components\TextInput::make('stok')
-                            ->label('Stok')
-                            ->integer()
-                            ->default(0)
-                            ->minValue(0)
-                            ->required(),
+                            Forms\Components\Section::make('Manajemen Stok')
+                                ->description('Atur stok dan satuan barang')
+                                ->schema([
+                                    Forms\Components\Grid::make(3)
+                                        ->schema([
+                                            Forms\Components\TextInput::make('stok')
+                                                ->label('Stok Saat Ini')
+                                                ->integer()
+                                                ->minValue(0)
+                                                ->required()
+                                                ->suffixIcon('heroicon-m-cube'),
 
-                        Forms\Components\TextInput::make('stok_minimum')
-                            ->label('Stok Minimum')
-                            ->integer()
-                            ->default(5)
-                            ->minValue(0)
-                            ->required(),
+                                            Forms\Components\TextInput::make('stok_minimum')
+                                                ->label('Stok Minimum')
+                                                ->integer()
+                                                ->default(5)
+                                                ->minValue(0)
+                                                ->required()
+                                                ->suffixIcon('heroicon-m-exclamation-triangle')
+                                                ->helperText('Notifikasi akan muncul jika stok di bawah nilai ini'),
 
-                        Forms\Components\Select::make('satuan')
-                            ->label('Satuan')
-                            ->options([
-                                'pcs' => 'Pcs',
-                                'kg' => 'Kg',
-                                'liter' => 'Liter',
-                                'meter' => 'Meter',
-                                'pack' => 'Pack',
-                            ])
-                            ->default('pcs')
-                            ->required()
-                            ->preload()
-                            ->searchable(),
-                    ])->columns(3),
-            ]);
-    }
+                                            Forms\Components\Select::make('satuan')
+                                                ->label('Satuan')
+                                                ->options([
+                                                    'pcs' => 'Pcs',
+                                                    'kg' => 'Kg',
+                                                    'liter' => 'Liter',
+                                                    'pack' => 'Pack',
+                                                    'box' => 'Box',
+                                                    'lusin' => 'Lusin',
+                                                    'kodi' => 'Kodi',
+                                                    'rim' => 'Rim',
+                                                    'rol' => 'Rol',
+                                                    'meter' => 'Meter',
+                                                ])
+                                                ->default('pcs')
+                                                ->required()
+                                                ->preload()
+                                                ->native(false)
+                                                ->searchable(),
+                                        ]),
+                                ]),
+                        ]),
+                ])
+                ->activeTab(1),
+        ]);
+}
 
     public static function table(Table $table): Table
 {
@@ -157,39 +232,26 @@ class BarangResource extends Resource
                 ->wrap(),
 
             Tables\Columns\TextColumn::make('kategori.nama_kategori')
-                ->label('Kategori')
+                ->label('Kategori Barang')
                 ->searchable()
                 ->sortable()
                 ->badge()
                 ->color('secondary')
-                ->icon('heroicon-o-rectangle-stack')
-                ->extraCellAttributes(['class' => 'font-medium']),
+                ->icon('heroicon-o-bookmark'),
 
             Tables\Columns\TextColumn::make('harga_beli')
                 ->label('Harga Beli')
                 ->money('IDR')
                 ->formatStateUsing(fn($state) => 'Rp ' . number_format($state, 0, ',', '.'))
                 ->alignEnd()
-                ->sortable()
-                ->summarize([
-                    Tables\Columns\Summarizers\Average::make()
-                        ->money('IDR')
-                        ->formatStateUsing(fn($state) => 'Rata-rata: Rp ' . number_format($state, 0, ',', '.')),
-                ]),
+                ->sortable(),
 
             Tables\Columns\TextColumn::make('harga_jual')
                 ->label('Harga Jual')
                 ->money('IDR')
                 ->formatStateUsing(fn($state) => 'Rp ' . number_format($state, 0, ',', '.'))
                 ->alignEnd()
-                ->sortable()
-                ->color(fn($record) => $record->harga_jual > 1.5 * $record->harga_beli ? 'success' : 'primary')
-                ->tooltip(fn($record) => 'Profit: Rp ' . number_format($record->harga_jual - $record->harga_beli, 0, ',', '.'))
-                ->summarize([
-                    Tables\Columns\Summarizers\Average::make()
-                        ->money('IDR')
-                        ->formatStateUsing(fn($state) => 'Rata-rata: Rp ' . number_format($state, 0, ',', '.')),
-                ]),
+                ->sortable(),
 
             Tables\Columns\TextColumn::make('stok')
                 ->label('Stok')
@@ -266,13 +328,11 @@ class BarangResource extends Resource
                             Forms\Components\TextInput::make('harga_dari')
                                 ->label('Harga dari')
                                 ->numeric()
-                                ->placeholder('Min')
-                                ,
+                                ->placeholder('Min'),
                             Forms\Components\TextInput::make('harga_sampai')
                                 ->label('Harga sampai')
                                 ->numeric()
-                                ->placeholder('Max')
-                                ,
+                                ->placeholder('Max'),
                         ]),
                 ])
                 ->query(function (Builder $query, array $data): Builder {

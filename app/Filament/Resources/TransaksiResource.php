@@ -99,7 +99,7 @@ class TransaksiResource extends Resource
             $set('../../faktur.status', $fakturStatus);
         }
     }
-    
+
     public static function form(Form $form): Form
     {
         return $form
@@ -143,11 +143,27 @@ class TransaksiResource extends Resource
                                                         ->preload()
                                                         ->columnSpan(1),
 
+                                                        Forms\Components\Radio::make('tipe_pelanggan')
+                                                        ->label('Tipe Pelanggan')
+                                                        ->options([
+                                                            'non_member' => 'Umum (Non-Member)',
+                                                            'member' => 'Member',
+                                                        ])
+                                                        ->default('non_member')
+                                                        ->required()
+                                                        ->live()
+                                                        ->afterStateUpdated(function (callable $set) {
+                                                            // Reset member_id jika tipe pelanggan berubah
+                                                            $set('member_id', null);
+                                                        }),
+                                                    
                                                     Select::make('member_id')
-                                                        ->label('Member')
+                                                        ->label('Pilih Member')
                                                         ->relationship('member', 'nama_member')
                                                         ->searchable()
                                                         ->preload()
+                                                        ->required(fn (callable $get) => $get('tipe_pelanggan') === 'member')
+                                                        ->visible(fn (callable $get) => $get('tipe_pelanggan') === 'member')
                                                         ->createOptionForm([
                                                             TextInput::make('kode_member')
                                                                 ->label('Kode Member')
@@ -232,6 +248,7 @@ class TransaksiResource extends Resource
                                                         ->numeric()
                                                         ->required()
                                                         ->disabled()
+                                                        ->live()
                                                         ->columnSpan(1)
                                                         ->reactive(),
 
@@ -273,6 +290,7 @@ class TransaksiResource extends Resource
                                                         ->disabled()
                                                         ->default(0)
                                                         ->required()
+                                                        ->live()
                                                         ->formatStateUsing(fn($state) => number_format($state, 0, ',', '.'))
                                                         ->columnSpan(1),
                                                 ]),
@@ -311,6 +329,7 @@ class TransaksiResource extends Resource
                                                 ->disabled()
                                                 ->required()
                                                 ->dehydrated()
+                                                ->live()
                                                 ->formatStateUsing(fn($state) => number_format($state, 0, ',', '.'))
                                                 ->columnSpan(1),
 
@@ -319,26 +338,27 @@ class TransaksiResource extends Resource
                                                 ->helperText('Jumlah yang dibayarkan oleh pelanggan')
                                                 ->prefix('Rp')
                                                 ->required()
+                                                ->live()
                                                 ->mask(RawJs::make('$money($input)'))
                                                 ->reactive()
-                                                ->lazy() 
+                                                ->lazy()
                                                 ->afterStateUpdated(function ($state, callable $set, callable $get) {
                                                     // Pastikan nilai numerik yang bersih
                                                     $numericValue = is_string($state) ? preg_replace('/[^0-9]/', '', $state) : $state;
-                                                    
+
                                                     // Set nilai yang sudah dibersihkan
                                                     $set('total_bayar', $numericValue);
-                                                    
+
                                                     // Ambil total harga dan bersihkan juga
                                                     $totalHarga = $get('total_harga') ?: 0;
                                                     if (is_string($totalHarga)) {
                                                         $totalHarga = (int) preg_replace('/[^0-9]/', '', $totalHarga);
                                                     }
-                                                    
+
                                                     // Hitung kembalian
                                                     $kembalian = max(0, (int)$numericValue - (int)$totalHarga);
                                                     $set('kembalian', $kembalian);
-                                                    
+
                                                     // Tentukan status pembayaran
                                                     $statusPembayaran = 'belum_bayar';
                                                     if ((int)$numericValue >= (int)$totalHarga && (int)$totalHarga > 0) {
@@ -346,16 +366,16 @@ class TransaksiResource extends Resource
                                                     } else if ((int)$numericValue > 0 && (int)$totalHarga > 0) {
                                                         $statusPembayaran = 'sebagian';
                                                     }
-                                                    
+
                                                     // Set status pembayaran
                                                     $set('status_pembayaran', $statusPembayaran);
-                                                    
+
                                                     // Sinkronkan dengan status faktur jika create_faktur = true
                                                     if ($get('create_faktur')) {
                                                         $fakturStatus = ($statusPembayaran === 'lunas') ? 'lunas' : 'belum_lunas';
                                                         $set('faktur.status', $fakturStatus);
                                                     }
-                                                    
+
                                                     // Debug: tambahkan notifikasi untuk konfirmasi perhitungan
                                                     Notification::make()
                                                         ->title('Pembayaran diperbarui')
@@ -370,6 +390,7 @@ class TransaksiResource extends Resource
                                                 ->prefix('Rp')
                                                 ->disabled()
                                                 ->required()
+                                                ->live()
                                                 ->default(0)
                                                 ->dehydrated()
                                                 ->formatStateUsing(fn($state) => number_format($state, 0, ',', '.'))

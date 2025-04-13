@@ -42,7 +42,8 @@ class KategoriResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('nama_kategori')
-                ->label('Nama Kategori'),
+                ->label('Nama Kategori')
+                ->alignCenter(),
             ])
             ->filters([
                 //
