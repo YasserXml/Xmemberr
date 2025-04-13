@@ -39,6 +39,10 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Support\Enums\FontWeight;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Storage;
 
 class TransaksiResource extends Resource
 {
@@ -513,7 +517,7 @@ class TransaksiResource extends Resource
                     ->icon('heroicon-o-calendar'),
 
                 TextColumn::make('member.nama_member')
-                    ->label('Member')
+                    ->label('Pelanggan')
                     ->searchable()
                     ->sortable()
                     ->icon('heroicon-o-user')
@@ -563,9 +567,9 @@ class TransaksiResource extends Resource
                         default => 'primary',
                     }),
 
-                Tables\Columns\IconColumn::make('fakturs_count')
+                Tables\Columns\IconColumn::make('faktur_count')
                     ->label('Faktur')
-                    ->counts('fakturs')
+                    ->counts('faktur')
                     ->tooltip(fn(int $state): string => "{$state} faktur terkait")
                     ->icon(fn(int $state): string => $state > 0 ? 'heroicon-o-document-check' : 'heroicon-o-document-minus')
                     ->color(fn(int $state): string => $state > 0 ? 'success' : 'danger'),
@@ -622,9 +626,9 @@ class TransaksiResource extends Resource
                         return $indicators;
                     }),
 
-                Filter::make('has_fakturs')
+                Filter::make('has_faktur')
                     ->label('Memiliki Faktur')
-                    ->query(fn(Builder $query): Builder => $query->whereHas('fakturs'))
+                    ->query(fn(Builder $query): Builder => $query->whereHas('faktur'))
                     ->toggle(),
             ])
             ->actions([
@@ -667,7 +671,7 @@ class TransaksiResource extends Resource
                                 ->placeholder('Masukkan catatan untuk faktur ini'),
                         ])
                         ->action(function (Transaksi $record, array $data): void {
-                            $record->fakturs()->create([
+                            $record->faktur()->create([
                                 'no_faktur' => $data['no_faktur'],
                                 'tanggal_faktur' => $data['tanggal_faktur'],
                                 'status' => $data['status'],
@@ -675,7 +679,7 @@ class TransaksiResource extends Resource
                             ]);
                         })
                         ->requiresConfirmation()
-                        ->visible(fn(Transaksi $record): bool => $record->fakturs()->count() === 0),
+                        ->visible(fn(Transaksi $record): bool => $record->faktur()->count() === 0),
 
                     Tables\Actions\DeleteAction::make()
                         ->label('Hapus')
@@ -705,7 +709,7 @@ class TransaksiResource extends Resource
     public static function getRelations(): array
     {
         return [
-            RelationManagers\FaktursRelationManager::class,
+            RelationManagers\FakturRelationManager::class,
         ];
     }
 

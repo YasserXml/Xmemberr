@@ -12,9 +12,9 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 
-class FaktursRelationManager extends RelationManager
+class FakturRelationManager extends RelationManager
 {
-    protected static string $relationship = 'fakturs';
+    protected static string $relationship = 'faktur';
 
     protected static ?string $recordTitleAttribute = 'no_faktur';
 

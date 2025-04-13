@@ -4,6 +4,7 @@ namespace App\Filament\Resources\TransaksiResource\Pages;
 
 use App\Filament\Resources\TransaksiResource;
 use Filament\Actions;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Str;
 
@@ -50,5 +51,46 @@ class CreateTransaksi extends CreateRecord
     {
         // Logika yang sama dengan beforeCreate
         return $this->mutateFormDataBeforeCreate($data);
+    }
+
+    protected function afterCreate(): void
+    {
+        $transaksi = $this->record;
+
+        // Check if create_faktur is enabled
+        if ($this->data['create_faktur'] ?? false) {
+            // Create the faktur record
+            $transaksi->faktur()->create([
+                'no_faktur' => $this->data['faktur']['no_faktur'],
+                'tanggal_faktur' => $this->data['faktur']['tanggal_faktur'],
+                'status' => $this->data['faktur']['status'],
+                'keterangan' => $this->data['faktur']['keterangan'] ?? null,
+            ]);
+        }
+
+        $url = route('transaksi.invoice', ['transaksi' => $transaksi->id]);
+
+        // Menggunakan Notification dengan action untuk membuka tab baru
+        Notification::make()
+            ->title('Transaksi berhasil dibuat')
+            ->body('Klik untuk melihat atau mencetak invoice.')
+            ->actions([
+                \Filament\Notifications\Actions\Action::make('view_invoice')
+                    ->label('Lihat Invoice')
+                    ->url($url, shouldOpenInNewTab: true)
+                    ->button(),
+            ])
+            ->success()
+            ->send();
+
+        // Tambahkan JavaScript untuk otomatis membuka tab
+        $this->dispatch('open-browser-tab', url: $url);
+
+        $this-> getResource()::getUrl('index');
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
     }
 }

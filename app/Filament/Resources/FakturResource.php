@@ -124,27 +124,6 @@ class FakturResource extends Resource
                             ->columns(1),
                     ])
                     ->columnSpan(['lg' => 2]),
-                
-                // Forms\Components\Group::make()
-                //     ->schema([
-                //         Section::make('Status & Metadata')
-                //             ->schema([
-                //                 Forms\Components\Placeholder::make('created_at')
-                //                     ->label('Dibuat Pada')
-                //                     ->content(fn (Faktur $record): ?string => $record->created_at?->diffForHumans()),
-
-                //                 Forms\Components\Placeholder::make('updated_at')
-                //                     ->label('Diperbarui Pada')
-                //                     ->content(fn (Faktur $record): ?string => $record->updated_at?->diffForHumans()),
-                                
-                //                 // Forms\Components\Badge::make('status_badge')
-                //                 //     ->label('Status Pembayaran')
-                //                 //     ->dehydrated(false)
-                //                 //     ->content(fn (?Faktur $record) => $record?->status === 'lunas' ? 'Lunas' : 'Belum Lunas')
-                //                 //     ->color(fn (?Faktur $record) => $record?->status === 'lunas' ? 'success' : 'warning'),
-                //             ]),
-                //     ])
-                    // ->columnSpan(['lg' => 1]),
             ])
             ->columns(3);
     }

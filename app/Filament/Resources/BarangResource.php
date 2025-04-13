@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\BarangResource\Pages;
 use App\Filament\Resources\BarangResource\RelationManagers;
 use App\Models\Barang;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteAction;
@@ -15,6 +16,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Support\RawJs;
 use Filament\Tables;
+use Filament\Tables\Actions\BulkAction;
 use Filament\Tables\Actions\ForceDeleteBulkAction;
 use Filament\Tables\Actions\RestoreBulkAction;
 use Filament\Tables\Filters\TrashedFilter;
@@ -50,7 +52,7 @@ class BarangResource extends Resource
 
 
     public static function form(Form $form): Form
-{
+    {
     return $form
         ->schema([
             Forms\Components\Tabs::make('Manajemen Barang')
@@ -138,27 +140,14 @@ class BarangResource extends Resource
                                                 ->prefix('Rp')
                                                 ->inputMode('numeric')
                                                 ->live()
-                                                ->afterStateUpdated(function ($state, callable $set, $get) {
-                                                    $numericValue = preg_replace('/[^0-9]/', '', $state);
-                                                    $set('harga_jual', $numericValue);
-                                                    
-                                                    // Calculate margin
-                                                    $hargaBeli = (int)$get('harga_beli');
-                                                    if ($hargaBeli > 0 && $numericValue > 0) {
-                                                        $marginPercentage = (($numericValue - $hargaBeli) / $hargaBeli) * 100;
-                                                        $set('margin', round($marginPercentage, 2));
-                                                    }
-                                                })
                                                 ->minValue(0)
                                                 ->required()
-                                                ->suffixIcon('heroicon-m-receipt-percent'),
-                                        ]),
-                                    
-                                    Forms\Components\TextInput::make('margin')
-                                        ->label('Margin (%)')
-                                        ->disabled()
-                                        ->suffix('%')
-                                        ->dehydrated(false),
+                                                ->suffixIcon('heroicon-m-receipt-percent')
+                                                ->afterStateUpdated(function ($state, callable $set) {
+                                                    $numericValue = preg_replace('/[^0-9]/', '', $state);
+                                                    $set('harga_beli', $numericValue);
+                                                }),
+                                            ]),
                                 ]),
 
                             Forms\Components\Section::make('Manajemen Stok')
@@ -465,6 +454,55 @@ class BarangResource extends Resource
                     ->deselectRecordsAfterCompletion()
                     ->modalHeading('Update Stok Barang Terpilih')
                     ->modalWidth('md'),
+                    BulkAction::make('exportSelected')
+                    ->label('Export Terpilih')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->form([
+                        Forms\Components\Toggle::make('show_footer')
+                            ->label('Tampilkan Footer')
+                            ->default(true),
+                        Forms\Components\Toggle::make('preview')
+                            ->label('Tampilkan Preview')
+                            ->default(true),
+                    ])
+                    ->action(function (Collection $records, array $data) {
+                        // Check if preview is enabled
+                        if (isset($data['preview']) && $data['preview']) {
+                            // Get IDs of selected records
+                            $selectedIds = $records->pluck('id')->toArray();
+                            
+                            // Redirect to preview page with selected IDs
+                            $params = [
+                                'selected_ids' => $selectedIds,
+                                'paper_size' => $data['paper_size'] ?? 'a4',
+                                'show_footer' => $data['show_footer'] ?? true,
+                            ];
+                            
+                            $url = route('barang.preview-pdf', $params);
+                            // Open in new tab
+                            return redirect()->away($url);
+                        }
+                        
+                        // Jika tidak preview, lanjutkan dengan download langsung
+                        $records->load('kategori');
+                        
+                        $pdf = Pdf::loadView('exports.barang', [
+                            'barang' => $records,
+                            'tanggal' => now()->format('d/m/Y'),
+                            'title' => 'Data Barang Terpilih',
+                            'showFooter' => $data['show_footer'] ?? true,
+                        ]);
+                        
+                        // Set paper size
+                        $pdf->setPaper($data['paper_size'] ?? 'a4');
+                        
+                        $filename = 'data-barang-selected-' . now()->format('YmdHis') . '.pdf';
+                        
+                        return response()->streamDownload(
+                            fn () => print($pdf->output()),
+                            $filename
+                        );
+                    })
                 ])
         ])
         ->emptyStateHeading('Belum ada data barang')

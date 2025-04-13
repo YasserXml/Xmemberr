@@ -41,9 +41,9 @@ class Transaksi extends Model
         return $this->belongsTo(Member::class);
     }
     
-    public function fakturs()
+    public function faktur()
     {
-        return $this->hasMany(Faktur::class);
+        return $this->hasOne(Faktur::class, 'transaksi_id');
     }
     
     public function barangKeluars()

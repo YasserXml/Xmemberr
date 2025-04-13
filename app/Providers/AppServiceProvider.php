@@ -25,5 +25,6 @@ class AppServiceProvider extends ServiceProvider
     {
         Barangmasuk::observe(BarangmasukObserver::class);
         Transaksi::observe(TransaksiObserver::class);
+        \Carbon\Carbon::setLocale('id');
     }
 }
