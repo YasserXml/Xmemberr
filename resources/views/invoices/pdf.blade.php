@@ -309,30 +309,5 @@
 
         <div class="footer">
             <p>Terima kasih telah berbelanja di {{ config('app.name', 'Toko Saya') }}.</p>
-            <p>Invoice ini sah dan diproses oleh komputer.</p>
         </div>
-
-        <div class="actions no-print">
-            <button class="btn btn-primary" onclick="window.print()">Cetak Invoice</button>
-            <a href="{{ route('transaksi.download', ['transaksi' => $transaksi->id]) }}" class="btn btn-success">Download Dokumen</a>
-            <a href="{{ route('filament.admin.resources.transaksi.index') }}" class="btn btn-secondary">Kembali</a>
-        </div>
-    </div>
-    <script>
-        // Fungsi untuk mencetak otomatis dengan delay
-        document.addEventListener('DOMContentLoaded', function() {
-            // Set default filename when printing to PDF
-            const defaultFilename =
-                "{{ $transaksi->no_transaksi }}-{{ $transaksi->tanggal_transaksi->format('Y-m-d') }}";
-
-            if (window.addEventListener) {
-                window.addEventListener('beforeprint', function() {
-                    document.title = defaultFilename;
-                });
-            }
-        });
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-
-</html>
+    </html>

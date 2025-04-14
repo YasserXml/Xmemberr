@@ -81,6 +81,7 @@ class CreateTransaksi extends CreateRecord
                     ->button(),
             ])
             ->success()
+             ->timeout(25000)
             ->send();
 
         // Tambahkan JavaScript untuk otomatis membuka tab

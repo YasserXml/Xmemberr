@@ -147,7 +147,7 @@ class TransaksiResource extends Resource
                                                         ->preload()
                                                         ->columnSpan(1),
 
-                                                        Forms\Components\Radio::make('tipe_pelanggan')
+                                                    Forms\Components\Radio::make('tipe_pelanggan')
                                                         ->label('Tipe Pelanggan')
                                                         ->options([
                                                             'non_member' => 'Umum (Non-Member)',
@@ -160,14 +160,14 @@ class TransaksiResource extends Resource
                                                             // Reset member_id jika tipe pelanggan berubah
                                                             $set('member_id', null);
                                                         }),
-                                                    
+
                                                     Select::make('member_id')
                                                         ->label('Pilih Member')
                                                         ->relationship('member', 'nama_member')
                                                         ->searchable()
                                                         ->preload()
-                                                        ->required(fn (callable $get) => $get('tipe_pelanggan') === 'member')
-                                                        ->visible(fn (callable $get) => $get('tipe_pelanggan') === 'member')
+                                                        ->required(fn(callable $get) => $get('tipe_pelanggan') === 'member')
+                                                        ->visible(fn(callable $get) => $get('tipe_pelanggan') === 'member')
                                                         ->createOptionForm([
                                                             TextInput::make('kode_member')
                                                                 ->label('Kode Member')
@@ -637,6 +637,14 @@ class TransaksiResource extends Resource
                         ->label('Lihat')
                         ->icon('heroicon-o-eye'),
 
+                    Action::make('printInvoice')
+                        ->label('Cetak Invoice')
+                        ->icon('heroicon-o-printer')
+                        ->color('success')
+                        ->url(fn(Transaksi $record) => route('transaksi.invoice.print', ['transaksi' => $record->id]), true)
+                        ->openUrlInNewTab()
+                        ->visible(fn(Transaksi $record): bool => $record->faktur()->count() > 0),
+
                     Tables\Actions\EditAction::make()
                         ->label('Edit')
                         ->icon('heroicon-o-pencil'),
@@ -677,6 +685,20 @@ class TransaksiResource extends Resource
                                 'status' => $data['status'],
                                 'keterangan' => $data['keterangan'],
                             ]);
+                            $url = route('transaksi.invoice', ['transaksi' => $record->id]);
+
+                            Notification::make()
+                                ->title('Faktur berhasil dibuat')
+                                ->body('Klik untuk melihat atau mencetak invoice.')
+                                ->actions([
+                                    \Filament\Notifications\Actions\Action::make('view_invoice')
+                                        ->label('Lihat Invoice')
+                                        ->url($url, shouldOpenInNewTab: true)
+                                        ->button(),
+                                ])
+                                ->success()
+                                ->timeout(25000)
+                                ->send();
                         })
                         ->requiresConfirmation()
                         ->visible(fn(Transaksi $record): bool => $record->faktur()->count() === 0),

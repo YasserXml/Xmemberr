@@ -6,7 +6,11 @@ use App\Models\Barangmasuk;
 use App\Models\Transaksi;
 use App\Observers\BarangmasukObserver;
 use App\Observers\TransaksiObserver;
+use Illuminate\View\View;
+use Filament\Facades\Filament;
 use Illuminate\Support\ServiceProvider;
+
+
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,4 +31,5 @@ class AppServiceProvider extends ServiceProvider
         Transaksi::observe(TransaksiObserver::class);
         \Carbon\Carbon::setLocale('id');
     }
-}
+    }
+

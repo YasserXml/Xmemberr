@@ -12,6 +12,11 @@ Route::middleware(['auth:web'])->prefix('admin')->group(function () {
     
     Route::get('/transaksi/{transaksi}/invoice/download', [InvoiceController::class, 'download'])
         ->name('transaksi.invoice.download');
+
+    Route::get('/transaksi/{transaksi}/invoice/print', [InvoiceController::class, 'print'])
+        ->name('transaksi.invoice.print');
+
+        Route::get('/transaksi/{transaksi}/download', [InvoiceController::class, 'download'])->name('transaksi.download');
 });
 
 
