@@ -240,6 +240,8 @@ class BarangmasukResource extends Resource
                                             ->mask(RawJs::make('$money($input)'))
                                             ->prefixIcon('heroicon-o-banknotes')
                                             ->live()
+                                            ->reactive()
+                                            ->lazy()
                                             ->afterStateUpdated(function ($state, callable $set, $get) {
                                                 $numericValue = preg_replace('/[^0-9]/', '', $state);
                                                 $set('harga_beli', $numericValue);

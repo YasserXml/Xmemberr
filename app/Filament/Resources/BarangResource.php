@@ -145,7 +145,7 @@ class BarangResource extends Resource
                                                 ->suffixIcon('heroicon-m-receipt-percent')
                                                 ->afterStateUpdated(function ($state, callable $set) {
                                                     $numericValue = preg_replace('/[^0-9]/', '', $state);
-                                                    $set('harga_beli', $numericValue);
+                                                    $set('harga_jual', $numericValue);
                                                 }),
                                             ]),
                                 ]),

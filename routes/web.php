@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\BarangPdfController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\LaporanController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/admin');
@@ -21,3 +22,7 @@ Route::middleware(['auth:web'])->prefix('admin')->group(function () {
 
 
 Route::get('/barang/preview-pdf', [BarangPdfController::class, 'previewPdf'])->name('barang.preview-pdf');
+
+Route::get('/laporan/{laporan}/export-pdf', [LaporanController::class, 'exportPdf'])
+    ->middleware(['auth'])
+    ->name('laporan.export-pdf');
