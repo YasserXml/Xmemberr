@@ -19,14 +19,6 @@ class Barangmasuk extends Model
         'total_harga',
         'tanggal_masuk_barang',
         'user_id',
-
-        'nama_barang',
-        'kode_barang',
-        'harga_jual',
-        'stok_minimum',
-        'satuan',
-        'kategori_id',
-        'tipe_transaksi',
     ];
 
     protected $casts = [
@@ -35,9 +27,8 @@ class Barangmasuk extends Model
         'total_harga' => 'integer',
     ];
 
-
     public function barang()
-    { 
+    {
         return $this->belongsTo(Barang::class);
     }
 

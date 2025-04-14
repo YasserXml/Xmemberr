@@ -15,15 +15,50 @@ class CreateBarangmasuk extends CreateRecord
     protected static string $resource = BarangmasukResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array
-{
-    // Set user_id (sudah ada)
-    $data['user_id'] = filament()->auth()->id();
-    
-    // Cek jika tipe_transaksi adalah barang_baru
-    if (isset($data['tipe_transaksi']) && $data['tipe_transaksi'] === 'barang_baru') {
+    {
+        // PENTING: Pastikan no_referensi selalu terisi
+        if (empty($data['no_referensi'])) {
+            $data['no_referensi'] = 'BM-' . strtoupper(\Illuminate\Support\Str::random(8));
+        }
+
+        // Set user_id
+        $data['user_id'] = filament()->auth()->id();
+
+        // Proses berdasarkan tipe transaksi
+        if (isset($data['tipe_transaksi'])) {
+            if ($data['tipe_transaksi'] === 'barang_baru') {
+                $this->createNewBarang($data);
+            } else if ($data['tipe_transaksi'] === 'barang_lama' && isset($data['barang_id'])) {
+                $this->updateExistingBarang($data);
+            }
+        }
+
+        // Pastikan total_harga terhitung
+        if (!isset($data['total_harga']) || empty($data['total_harga'])) {
+            $data['total_harga'] = $data['harga_beli'] * $data['jumlah_barang_masuk'];
+        }
+
+        // Pastikan tanggal ada
+        if (!isset($data['tanggal_masuk_barang']) || empty($data['tanggal_masuk_barang'])) {
+            $data['tanggal_masuk_barang'] = now()->format('Y-m-d');
+        }
+
+        // Hanya kembalikan field yang diperlukan untuk model BarangMasuk
+        return [
+            'no_referensi' => $data['no_referensi'],
+            'barang_id' => $data['barang_id'],
+            'jumlah_barang_masuk' => $data['jumlah_barang_masuk'],
+            'harga_beli' => $data['harga_beli'],
+            'total_harga' => $data['total_harga'],
+            'tanggal_masuk_barang' => $data['tanggal_masuk_barang'],
+            'user_id' => $data['user_id'],
+        ];
+    }
+
+    private function createNewBarang(array &$data): void
+    {
         DB::beginTransaction();
         try {
-            // Buat barang baru
             $barang = Barang::create([
                 'kode_barang' => $data['kode_barang'],
                 'nama_barang' => $data['nama_barang'],
@@ -32,30 +67,34 @@ class CreateBarangmasuk extends CreateRecord
                 'stok' => $data['jumlah_barang_masuk'],
                 'stok_minimum' => $data['stok_minimum'] ?? 5,
                 'satuan' => $data['satuan'] ?? 'pcs',
-                'kategori_id' => $data['kategori_id'],
             ]);
-            
-            // Set barang_id
+
             $data['barang_id'] = $barang->id;
-            
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;
         }
     }
-    
-    // Filter data yang akan disimpan ke tabel barangmasuks
-    return [
-        'no_referensi' => $data['no_referensi'],
-        'barang_id' => $data['barang_id'],
-        'jumlah_barang_masuk' => $data['jumlah_barang_masuk'],
-        'harga_beli' => $data['harga_beli'],
-        'total_harga' => $data['total_harga'],
-        'tanggal_masuk_barang' => $data['tanggal_masuk_barang'],
-        'user_id' => $data['user_id'],
-    ];
-}
+
+    private function updateExistingBarang(array $data): void
+    {
+        DB::beginTransaction();
+        try {
+            $barang = Barang::findOrFail($data['barang_id']);
+
+            // Update stok barang
+            $barang->stok += $data['jumlah_barang_masuk'];
+            // Update harga beli jika diperlukan 
+            $barang->harga_beli = $data['harga_beli'];
+            $barang->save();
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+    }
 
     protected function getRedirectUrl(): string
     {
@@ -69,10 +108,10 @@ class CreateBarangmasuk extends CreateRecord
 
     protected function getCreatedNotification(): ?Notification
     {
-    return Notification::make()
-        ->success()
-        ->title('Data tersimpan')
-        ->body('Data barang baru berhasil tersimpan')
-        ->seconds(5);
+        return Notification::make()
+            ->success()
+            ->title('Data tersimpan')
+            ->body('Data barang baru berhasil tersimpan')
+            ->seconds(5);
     }
 }
